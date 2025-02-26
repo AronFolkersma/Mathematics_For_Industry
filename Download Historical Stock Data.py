@@ -13,8 +13,8 @@ stocks = ["AAPL", "NVDA", "MSFT", "AMZN", "WMT", "JPM", "V", "UNH", "PG",
 start_date = "2009-01-01"
 end_date = "2025-01-01"
 
-data_path = os.path.join(os.path.expanduser('~'), 'Downloads', 
-                         'Mathematics_For_Industry/DATA')
+file_path = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.join(file_path, "DATA")
 
 for stock_symbol in stocks:
     historical_data = yf.download(stock_symbol).reset_index()
