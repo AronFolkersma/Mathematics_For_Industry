@@ -85,7 +85,6 @@ cluster_corr_matrix = avg_cluster_returns_wide.corr()
 condition_number = np.linalg.cond(cluster_cov_matrix)
 print(f"Condition number of covariance matrix: {condition_number:.2f}")
 
-
 # Print cluster groupings
 for cluster_num in range(1, num_clusters + 1):
     cluster_members = cluster_df[cluster_df['Cluster'] == cluster_num]['Stock'].tolist()
@@ -143,10 +142,8 @@ def plot_heatmap_with_borders(matrix, title, ax, cmap):
             end = boundaries[i]
 
         # Draw a white rectangle around each cluster
-        rect = patches.Rectangle(
-            (start, start), end - start, end - start,
-            linewidth=2, edgecolor='white', facecolor='none'
-        )
+        rect = patches.Rectangle((start, start), end - start, end - start,
+            linewidth=2, edgecolor='white', facecolor='none')
         ax.add_patch(rect)
     
     ax.set_title(title)
