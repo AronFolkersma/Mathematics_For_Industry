@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import linkage, dendrogram, leaves_list
 from sklearn.preprocessing import MinMaxScaler
+from cluster_number import plot_optimal_number_of_clusters
 
 # List of Dow Jones stocks
 stocks = ["AAPL", "NVDA", "MSFT", "AMZN", "WMT", "JPM", "V", "UNH", "PG", 
@@ -59,42 +60,47 @@ combined_dist_matrix = (1 - alpha) * corr_dist_matrix + alpha * esg_dist_matrix
 linkage_method = "average"  # Choose "single", "complete", "average", "ward", etc.
 linkage_matrix = linkage(combined_dist_matrix, method=linkage_method)
 
-# Plot dendrogram
-plt.figure(figsize=(12, 6))
-dendrogram(linkage_matrix, labels=combined_dist_matrix.index, leaf_rotation=90)
-plt.title("Dendrogram for alpha = " + str(alpha) + " (Note: 0 is only correlation, 1 is only ESG)")
-plt.xlabel("Stocks")
-plt.ylabel("Distance")
-plt.show()
+# Find Optimal Number of Clusters
+methods = ["maxgap", "elbow" ,"average silhouette"]
+plot_optimal_number_of_clusters(linkage_matrix, combined_dist_matrix, len(stocks), methods, stocks)
 
-# Reorder based on clustering
-reordered_indices = leaves_list(linkage_matrix)
-reordered_corr_dist_matrix = corr_dist_matrix.iloc[reordered_indices, reordered_indices]
-reordered_esg_dist_matrix = esg_dist_matrix.iloc[reordered_indices, reordered_indices]
-combined_dist_matrix_reordered = combined_dist_matrix.iloc[reordered_indices, reordered_indices]
 
-# Plot original and reordered matrices
-fig, axes = plt.subplots(2, 3, figsize=(24, 16))
+# # Plot dendrogram
+# plt.figure(figsize=(12, 6))
+# dendrogram(linkage_matrix, labels=combined_dist_matrix.index, leaf_rotation=90)
+# plt.title("Dendrogram for alpha = " + str(alpha) + " (Note: 0 is only correlation, 1 is only ESG)")
+# plt.xlabel("Stocks")
+# plt.ylabel("Distance")
+# plt.show()
 
-sns.heatmap(corr_dist_matrix, ax=axes[0, 0], cmap="coolwarm", annot=False)
-axes[0, 0].set_title("Original Correlation Distance Matrix")
+# # Reorder based on clustering
+# reordered_indices = leaves_list(linkage_matrix)
+# reordered_corr_dist_matrix = corr_dist_matrix.iloc[reordered_indices, reordered_indices]
+# reordered_esg_dist_matrix = esg_dist_matrix.iloc[reordered_indices, reordered_indices]
+# combined_dist_matrix_reordered = combined_dist_matrix.iloc[reordered_indices, reordered_indices]
 
-sns.heatmap(esg_dist_matrix, ax=axes[0, 1], cmap="viridis", annot=False)
-axes[0, 1].set_title("Original ESG Distance Matrix")
+# # Plot original and reordered matrices
+# fig, axes = plt.subplots(2, 3, figsize=(24, 16))
 
-sns.heatmap(combined_dist_matrix, ax=axes[0, 2], cmap="cividis", annot=False)
-axes[0, 2].set_title("Original Combined Distance Matrix")
+# sns.heatmap(corr_dist_matrix, ax=axes[0, 0], cmap="coolwarm", annot=False)
+# axes[0, 0].set_title("Original Correlation Distance Matrix")
 
-sns.heatmap(reordered_corr_dist_matrix, ax=axes[1, 0], cmap="coolwarm", annot=False)
-axes[1, 0].set_title("Reordered Correlation Distance Matrix")
+# sns.heatmap(esg_dist_matrix, ax=axes[0, 1], cmap="viridis", annot=False)
+# axes[0, 1].set_title("Original ESG Distance Matrix")
 
-sns.heatmap(reordered_esg_dist_matrix, ax=axes[1, 1], cmap="viridis", annot=False)
-axes[1, 1].set_title("Reordered ESG Distance Matrix")
+# sns.heatmap(combined_dist_matrix, ax=axes[0, 2], cmap="cividis", annot=False)
+# axes[0, 2].set_title("Original Combined Distance Matrix")
 
-sns.heatmap(combined_dist_matrix_reordered, ax=axes[1, 2], cmap="cividis", annot=False)
-axes[1, 2].set_title("Reordered Combined Distance Matrix")
+# sns.heatmap(reordered_corr_dist_matrix, ax=axes[1, 0], cmap="coolwarm", annot=False)
+# axes[1, 0].set_title("Reordered Correlation Distance Matrix")
 
-plt.tight_layout()
-plt.show()
+# sns.heatmap(reordered_esg_dist_matrix, ax=axes[1, 1], cmap="viridis", annot=False)
+# axes[1, 1].set_title("Reordered ESG Distance Matrix")
+
+# sns.heatmap(combined_dist_matrix_reordered, ax=axes[1, 2], cmap="cividis", annot=False)
+# axes[1, 2].set_title("Reordered Combined Distance Matrix")
+
+# plt.tight_layout()
+# plt.show()
 
 
