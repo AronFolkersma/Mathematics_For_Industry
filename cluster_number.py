@@ -74,9 +74,6 @@ def clusters_to_labels(inputs, clusters):
     
     return labels
 
-def tickers_to_indices(cluster, tickers):
-    return [tickers.index(ticker) for ticker in cluster]
-
 def dist_from_number_of_clusters(tree, i):
     if tree.get("name"): return 0
     if tree["clusters"] == i: return tree["distance"]
@@ -84,6 +81,21 @@ def dist_from_number_of_clusters(tree, i):
     left, right = tree["children"]
 
     return dist_from_number_of_clusters(left, i) + dist_from_number_of_clusters(right, i)
+
+def biggest_drop_index(arr):
+    if len(arr) < 2:
+        return -1  # No drop possible if there are fewer than 2 elements
+    
+    max_drop = 0
+    max_index = -1
+    
+    for i in range(len(arr) - 1):
+        drop = arr[i] - arr[i + 1]
+        if drop > max_drop:
+            max_drop = drop
+            max_index = i+1  # Store the index of the first element in the biggest drop
+    
+    return max_index
 
 def optimal_number_of_clusters(linkage_matrix, distance_matrix, n_stocks:int, method:str, tickers):
     tree = build_tree(linkage_matrix, tickers)
@@ -97,11 +109,19 @@ def optimal_number_of_clusters(linkage_matrix, distance_matrix, n_stocks:int, me
             case "maxgap":
                 vs[n-1] = dist_from_number_of_clusters(tree, n)
             case "elbow":
-                vs[n-1] = sum(compute_wss(tickers_to_indices(cluster, tickers), distance_matrix) for cluster in clusters)
-            case "average sillhouette":
-                vs[n-1] = silhouette_score(distance_matrix, y=clusters_to_labels(tickers, clusters), metric="precomputed")
+                vs[n-1] = sum(compute_wss(clusters_to_labels(cluster, tickers), distance_matrix) for cluster in clusters)
+            case "average silhouette":
+                vs[n-1] = silhouette_score(distance_matrix, labels=clusters_to_labels(tickers, clusters), metric="precomputed")
 
-    return ns, vs
+    match method:
+        case "maxgap":
+            optimal_n = ns[biggest_drop_index(vs)]
+        case "elbow":
+            optimal_n = KneeLocator(ns, vs, curve="convex", direction="decreasing").knee
+        case "average silhouette":
+            optimal_n = ns[np.argmax(vs)]
+
+    return ns, vs, optimal_n
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -113,10 +133,15 @@ def plot_optimal_number_of_clusters(linkage_matrix, distance_matrix, n_stocks: i
         axes = [axes]
     
     for ax, method in zip(axes, methods):
-        ns, vs = optimal_number_of_clusters(linkage_matrix, distance_matrix, n_stocks, method, tickers)
+        ns, vs, optimal_n = optimal_number_of_clusters(linkage_matrix, distance_matrix, n_stocks, method, tickers)
+
+        ax.axvline(x=optimal_n , ls='--', color='r', label=f"n={optimal_n}"
+)
+
         if method == "elbow":
             kn = KneeLocator(ns, vs, curve="convex", direction="decreasing")
             ax.axvline(x=kn.knee, ls='--', color='r', label=f"Elbow Point: n={kn.knee}")
+        
         ax.plot(ns, vs, marker='o', label=method)
         ax.set_xlabel("Number of Clusters")
         ax.set_ylabel("Score")
