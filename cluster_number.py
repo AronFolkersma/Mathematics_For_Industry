@@ -74,6 +74,13 @@ def clusters_to_labels(inputs, clusters):
     
     return labels
 
+def cluster_to_index(cluster, tickers):
+    indices = []
+    for ticker in cluster:
+        indices.append(tickers.index(ticker))
+    return indices
+
+
 def dist_from_number_of_clusters(tree, i):
     if tree.get("name"): return 0
     if tree["clusters"] == i: return tree["distance"]
@@ -109,9 +116,16 @@ def optimal_number_of_clusters(linkage_matrix, distance_matrix, n_stocks:int, me
             case "maxgap":
                 vs[n-1] = dist_from_number_of_clusters(tree, n)
             case "elbow":
-                vs[n-1] = sum(compute_wss(clusters_to_labels(cluster, tickers), distance_matrix) for cluster in clusters)
+                vs[n-1] = sum(compute_wss(cluster_to_index(cluster, tickers), distance_matrix) for cluster in clusters)
             case "average silhouette":
-                vs[n-1] = silhouette_score(distance_matrix, labels=clusters_to_labels(tickers, clusters), metric="precomputed")
+                labels = clusters_to_labels(tickers, clusters)
+                if len(set(labels)) > 1 and len(set(labels)) < n_stocks:  # Ensure there is more than one cluster
+                    vs[n-1] = silhouette_score(distance_matrix, labels=labels, metric="precomputed")
+                else:
+                    vs[n-1] = 0  
+            case "gap statistic":
+                vs[n-1] = 0
+                
 
     match method:
         case "maxgap":

@@ -61,7 +61,7 @@ linkage_method = "average"  # Choose "single", "complete", "average", "ward", et
 linkage_matrix = linkage(combined_dist_matrix, method=linkage_method)
 
 # Find Optimal Number of Clusters
-methods = ["maxgap", "elbow" ,"average silhouette"]
+methods = ["maxgap", "elbow", "average silhouette"]
 plot_optimal_number_of_clusters(linkage_matrix, combined_dist_matrix, len(stocks), methods, stocks)
 
 
