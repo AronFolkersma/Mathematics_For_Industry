@@ -7,6 +7,7 @@ from scipy.cluster.hierarchy import linkage, dendrogram, leaves_list, fcluster
 from scipy.spatial.distance import squareform
 from scipy.optimize import minimize
 from sklearn.preprocessing import MinMaxScaler
+from cluster_number import plot_optimal_number_of_clusters
 import matplotlib.patches as patches
 
 # List of Dow Jones stocks
@@ -116,6 +117,11 @@ def leaf_label_func(id):
     label_counter += 1
     return f"Cluster {label_counter}"
 
+
+# Find Optimal Number of Clusters
+methods = ["maxgap", "elbow", "average silhouette"]
+plot_optimal_number_of_clusters(linkage_matrix, combined_dist_matrix, len(stocks), methods, stocks)
+
 # Plot dendrogram with clusters
 plt.figure(figsize=(12, 6))
 dendrogram_output = dendrogram(linkage_matrix, p=num_clusters, truncate_mode='lastp', 
@@ -157,25 +163,49 @@ def plot_heatmap_with_borders(matrix, title, ax, cmap):
     
     ax.set_title(title)
 
-# Plot original and reordered matrices
-fig, axes = plt.subplots(2, 3, figsize=(24, 16))
+# # Plot dendrogram
+# plt.figure(figsize=(12, 6))
+# dendrogram(linkage_matrix, labels=combined_dist_matrix.index, leaf_rotation=90)
+# plt.title("Dendrogram for alpha = " + str(alpha) + " (Note: 0 is only correlation, 1 is only ESG)")
+# plt.xlabel("Stocks")
+# plt.ylabel("Distance")
+# plt.show()
 
-sns.heatmap(corr_dist_matrix, ax=axes[0, 0], cmap="coolwarm", annot=False)
-axes[0, 0].set_title("Original Correlation Distance Matrix")
+# # Reorder based on clustering
+# reordered_indices = leaves_list(linkage_matrix)
+# reordered_corr_dist_matrix = corr_dist_matrix.iloc[reordered_indices, reordered_indices]
+# reordered_esg_dist_matrix = esg_dist_matrix.iloc[reordered_indices, reordered_indices]
+# combined_dist_matrix_reordered = combined_dist_matrix.iloc[reordered_indices, reordered_indices]
 
-sns.heatmap(esg_dist_matrix, ax=axes[0, 1], cmap="viridis", annot=False)
-axes[0, 1].set_title("Original ESG Distance Matrix")
+# # Plot original and reordered matrices
+# fig, axes = plt.subplots(2, 3, figsize=(24, 16))
 
-sns.heatmap(combined_dist_matrix, ax=axes[0, 2], cmap="cividis", annot=False)
-axes[0, 2].set_title("Original Combined Distance Matrix")
+# sns.heatmap(corr_dist_matrix, ax=axes[0, 0], cmap="coolwarm", annot=False)
+# axes[0, 0].set_title("Original Correlation Distance Matrix")
+
+# sns.heatmap(esg_dist_matrix, ax=axes[0, 1], cmap="viridis", annot=False)
+# axes[0, 1].set_title("Original ESG Distance Matrix")
+
+# sns.heatmap(combined_dist_matrix, ax=axes[0, 2], cmap="cividis", annot=False)
+# axes[0, 2].set_title("Original Combined Distance Matrix")
+
+# sns.heatmap(reordered_corr_dist_matrix, ax=axes[1, 0], cmap="coolwarm", annot=False)
+# axes[1, 0].set_title("Reordered Correlation Distance Matrix")
 
 # Plot reordered heatmaps with cluster borders
 plot_heatmap_with_borders(reordered_corr_dist_matrix, "Reordered Correlation Distance Matrix", axes[1, 0], "coolwarm")
 plot_heatmap_with_borders(reordered_esg_dist_matrix, "Reordered ESG Distance Matrix", axes[1, 1], "viridis")
 plot_heatmap_with_borders(combined_dist_matrix_reordered, "Reordered Combined Distance Matrix", axes[1, 2], "cividis")
 
-plt.tight_layout()
-plt.show()
+
+# sns.heatmap(reordered_esg_dist_matrix, ax=axes[1, 1], cmap="viridis", annot=False)
+# axes[1, 1].set_title("Reordered ESG Distance Matrix")
+
+# sns.heatmap(combined_dist_matrix_reordered, ax=axes[1, 2], cmap="cividis", annot=False)
+# axes[1, 2].set_title("Reordered Combined Distance Matrix")
+
+# plt.tight_layout()
+# plt.show()
 
 # Optimzation problem
 def objective(weights, returns, cov_matrix, risk_aversion):
