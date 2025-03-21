@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: Hierarchical Clustering of Returns and ESG
+message: Please cite this software using these metadata.
+type: software
+authors:
+  - given-names: Nana
+    family-names: Giadresco
+  - given-names: Noah
+    family-names: van de weerd
+  - given-names: 'Niels '
+    family-names: Keukens
+  - given-names: Flore
+    family-names: Steenberghe
+  - given-names: Jord
+    family-names: van Eldik
+  - given-names: Branco
+    family-names: Titus
+  - given-names: 'Max '
+    family-names: Willems
+  - given-names: Aron
+    family-names: Folkersma
+repository-code: >-
+  https://github.com/AronFolkersma/Mathematics_For_Industry/tree/clean-merged-branch
+url: >-
+  https://github.com/AronFolkersma/Mathematics_For_Industry/tree/clean-merged-branch
