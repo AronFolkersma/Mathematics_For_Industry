@@ -11,6 +11,8 @@ from cluster_number import plot_optimal_number_of_clusters
 from download_historical_stock_data import get_input_data500
 import plotly.graph_objects as go
 import matplotlib.patches as patches
+import random
+import math
 
 # Counter to track function calls for dendrogram
 label_counter = 0
@@ -38,8 +40,12 @@ for stock_symbol in stocks:
     annual_returns = stock_data.groupby("Year")["Close"].apply(lambda x: (float(x.iloc[-1]) - float(x.iloc[0])) / float(x.iloc[0]))
     annual_returns_dict[stock_symbol] = annual_returns
 
+    #print(f"{stock_symbol}: {len(annual_returns)} years read in")
+#print(annual_returns.shape)
+
 # Convert annual returns dictionary into a dataframe
 returns_df = pd.DataFrame(annual_returns_dict)
+#returns_df = returns_df.iloc[:10, :].copy()  
 
 def corr_metric(returns_df, p):
     # Compute correlation matrix and distance matrix
@@ -49,7 +55,7 @@ def corr_metric(returns_df, p):
     if (p == 0):
             return np.sqrt(0.5*(1 - corr_matrix))
         
-    else:
+    if (p == 1):
         d = np.sqrt(0.5 * (1 - corr_matrix)).values
         corr_dist_matrix = d.copy()
         
@@ -59,6 +65,17 @@ def corr_metric(returns_df, p):
             
         corr_dist_matrix = corr_dist_matrix/np.max(corr_dist_matrix)
         return pd.DataFrame(corr_dist_matrix, index=returns_df.columns, columns=returns_df.columns)
+    
+    else:
+        points = [[random.random() for _ in range(len(corr_matrix))] for _ in range(len(corr_matrix))]
+        matrix = [[0.0 for _ in range(len(corr_matrix))] for _ in range(len(corr_matrix))]
+        for i in range(len(corr_matrix)):
+            for j in range(len(corr_matrix)):
+                distance = math.sqrt(sum((points[i][k] - points[j][k]) ** 2 for k in range(len(corr_matrix))))
+                matrix[i][j] = distance
+                matrix[j][i] = distance  # Ensure symmetry.
+        return pd.DataFrame(matrix, index=returns_df.columns, columns=returns_df.columns)
+
 
 def ESG_metric(ESG_normalized):
     # Compute ESG distance matrix
@@ -66,14 +83,14 @@ def ESG_metric(ESG_normalized):
     return  pd.DataFrame(esg_dist_matrix, index=stocks, columns=stocks)
 
 
-def compute_clusters(sigma, num_clusters, print_ = True, annual_returns_dict = annual_returns_dict, ESG_normalized = ESG_normalized):
+def compute_clusters(epsilon, num_clusters, print_ = True, annual_returns_dict = annual_returns_dict, ESG_normalized = ESG_normalized):
 
     # Compute correlation and ESG distance matrix
     global corr_dist_matrix; corr_dist_matrix = corr_metric(returns_df, p)
     global esg_dist_matrix; esg_dist_matrix = ESG_metric(ESG_normalized)
 
     # Compute the combined correlation and ESG distance matrix
-    global combined_dist_matrix; combined_dist_matrix = (1 - sigma) * corr_dist_matrix + sigma * esg_dist_matrix    
+    global combined_dist_matrix; combined_dist_matrix = (1 - epsilon) * corr_dist_matrix + epsilon * esg_dist_matrix    
 
     # Perform hierarchical clustering and create linkage matrix
     global linkage_matrix; linkage_matrix = linkage(squareform(combined_dist_matrix), method=linkage_method, optimal_ordering=True)
@@ -124,15 +141,15 @@ def compute_clusters(sigma, num_clusters, print_ = True, annual_returns_dict = a
         print(f"ESG variance across clusters: {esg_cluster_variance:.2f}")
 
         # Find Optimal Number of Clusters
-        methods = ["maxgap", "elbow", "average silhouette"]
-        plot_optimal_number_of_clusters(linkage_matrix, combined_dist_matrix, len(stocks), methods, stocks)
+        #methods = ["maxgap", "elbow", "average silhouette"]
+        #plot_optimal_number_of_clusters(linkage_matrix, combined_dist_matrix, len(stocks), methods, stocks)
 
 
-def plot_dendrograms(linkage_matrix, sigma, num_clusters):
+def plot_dendrograms(linkage_matrix, epsilon, num_clusters):
     # Plot dendrogram without clusters
     plt.figure(figsize=(12, 6))
     dendrogram(linkage_matrix, no_labels=True, leaf_rotation=90)
-    plt.title(f"Dendrogram for sigma = {sigma} with linkage method: " + linkage_method + 
+    plt.title(f"Dendrogram for $\\varepsilon$ = {epsilon} with linkage method: " + linkage_method + 
               " (Note: 0 is only correlation, 1 is only ESG)")
     plt.ylabel("Distance")
     plt.show()
@@ -148,7 +165,7 @@ def plot_dendrograms(linkage_matrix, sigma, num_clusters):
     plt.figure(figsize=(12, 6))
     dendrogram(linkage_matrix, p=num_clusters, truncate_mode='lastp', 
                                    leaf_rotation=45, leaf_label_func=leaf_label_func)
-    plt.title(f"Dendrogram for sigma = {sigma} with linkage method: " + linkage_method + 
+    plt.title(f"Dendrogram for $\\varepsilon$ = {epsilon} with linkage method: " + linkage_method + 
               " (Note: 0 is only correlation, 1 is only ESG)")
     plt.ylabel("Distance")
     plt.show()
@@ -203,22 +220,26 @@ def plot_heatmaps():
     plot_heatmap_with_borders(reordered_esg_dist_matrix, "Reordered ESG Distance Matrix", axes[1, 1], "viridis")
     plot_heatmap_with_borders(combined_dist_matrix_reordered, "Reordered Combined Distance Matrix", axes[1, 2], "cividis")
 
-    plt.tight_layout()
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    #fig.suptitle(f"Covariance, ESG and combined distance matrices for $\\varepsilon$ = {epsilon}", fontsize=16)
+
+    plt.savefig(f"heatmaps with borders for epsilon = {epsilon}.jpg", format = "jpg", dpi=150, bbox_inches = "tight")
     plt.show()
 
-def parallel_coordinates_plot(num_clusters_list, sigma_list):
+def parallel_coordinates_plot(num_clusters_list, epsilon_list):
     results = []
     
     for num_clusters in num_clusters_list:
-        for sigma in sigma_list:
-            compute_clusters(sigma, num_clusters, False)
+        for epsilon in epsilon_list:
+            compute_clusters(epsilon, num_clusters, False)
             output = optimize_portfolio(avg_return_per_cluster, cluster_cov_matrix, avg_esg_per_cluster)
             # Only include portfolios that satisfy the ESG constraint
             tolerance = 1e-3
             if (output[3] <= ESG_constraint + tolerance):
                 results.append({
                     "Number of clusters": num_clusters,
-                    "Sigma": sigma,
+                    f"$\\varepsilon$": epsilon,
                     "ESG variance": esg_cluster_variance,
                     "Expected return": output[1],
                     "Condition number": condition_number,
@@ -232,12 +253,12 @@ def parallel_coordinates_plot(num_clusters_list, sigma_list):
     # For general cases, where axis ranges are dynamically determined
     # fig = go.Figure(data=
     #     go.Parcoords(
-    #         line = dict(color = results_df["Sigma"],
+    #         line = dict(color = results_df[f"\\varepsilon"],
     #                    colorscale = "turbo",
     #                    showscale = True,
     #                    cmin = 0,
     #                    cmax = 1,
-    #                    colorbar=dict(title="Sigma")),
+    #                    colorbar=dict(title=f"\\varepsilon")),
     #         dimensions = list([
     #             dict(range = [results_df["Number of clusters"].min(), 
     #                           results_df["Number of clusters"].max()],
@@ -255,48 +276,50 @@ def parallel_coordinates_plot(num_clusters_list, sigma_list):
     #             dict(range = [results_df["ESG variance"].min(), 
     #                           results_df["ESG variance"].max()],
     #                  label = "ESG variance", values = results_df["ESG variance"]),
-    #             dict(range = [results_df["Sigma"].min(), 
-    #                           results_df["Sigma"].max()],
-    #                  label = "Sigma", values = results_df["Sigma"])])
+    #             dict(range = [results_df[f"\\varepsilon"].min(), 
+    #                           results_df[f"\\varepsilon"].max()],
+    #                  label = f"\\varepsilon", values = results_df[f"\\varepsilon"])])
     #     )
     # )
     
     # For our specific results with tailored predefined axis ranges
     fig = go.Figure(data=
         go.Parcoords(
-            line = dict(color = results_df["Sigma"],
+            line = dict(color = results_df[f"$\\varepsilon$"],
                        colorscale = "turbo",
                        showscale = True,
                        cmin = 0,
                        cmax = 1,
-                       colorbar=dict(title="Sigma")),
+                       colorbar=dict(title=f"epsilon")),
             dimensions = list([
-                dict(range = [2, 20],
+                dict(range = [2, 15],
                      label = "Number of clusters", values = results_df["Number of clusters"]),
-                dict(range = [0.16, 0.27],
-                     label = "Expected return", values = results_df["Expected return"]),
-                dict(range = [0.012, 0.044],
-                     label = "Risk", values = results_df["Risk"]),
-                dict(range = [0 , 21],
-                     label = "Condition number (scale log10)", 
-                     values = results_df["Condition number (log10)"]),
-                dict(range = [0, 125],
-                     label = "ESG variance", values = results_df["ESG variance"]),
+                #dict(range = [0.16, 0.27],
+                #    label = "Expected return", values = results_df["Expected return"]),
+                #dict(range = [0.012, 0.044],
+                #    label = "Risk", values = results_df["Risk"]),
+                 dict(range = [0 , 8],
+                      label = "Condition number (scale log10)", 
+                      values = results_df["Condition number (log10)"]),
+                 dict(range = [0, 125],
+                      label = "ESG variance", values = results_df["ESG variance"]),
                 dict(range = [0, 1],
-                     label = "Sigma", values = results_df["Sigma"])])
+                    label = f"epsilon", values = results_df[f"$\\varepsilon$"])])
         )
     )
     
     fig.update_layout(
-        title=("Portfolios with ESG constraint " + str(ESG_constraint)),
+        #title=("Risk and return of portfolios with ESG constraint " + str(ESG_constraint)),
+        title = ("Condition number and ESG variance for varying epsilon and number of clusters"),
         title_font=dict(size=30),
         title_x=0.5,
         font=dict(size=20)
     )
     
     # Save as an interactive HTML file
-    # fig.write_html("ESG_Constraint_20.html")
-    
+    #fig.write_html(f"ESG Constraint {ESG_constraint}.html")
+    fig.write_html(f"ESG variance and condition number.html")
+
     fig.show(renderer="browser")
 
 def optimize_portfolio(avg_return_per_cluster, cluster_cov_matrix, avg_esg_per_cluster):
@@ -332,15 +355,15 @@ def objective(weights, returns, cov_matrix, risk_aversion):
 
 # Parameters and constraints for optimization
 global risk_aversion; risk_aversion = 5
-global ESG_constraint; ESG_constraint = 20  # Adjust ESG constraint (weighted ESG score must be lower than the constraint)
+global ESG_constraint; ESG_constraint = 300  # Adjust ESG constraint (weighted ESG score must be lower than the constraint)
 
 global p; p = 0 # Choose metric
 global linkage_method; linkage_method = "ward"  # Choose "single", "complete", "average", "ward", etc.
-sigma = 0.15
-num_clusters = 8 # Choose number of clusters
+epsilon = 0.5
+num_clusters = 10 # Choose number of clusters
 
-compute_clusters(sigma, num_clusters)
-plot_dendrograms(linkage_matrix, sigma, num_clusters)
+compute_clusters(epsilon, num_clusters)
+#plot_dendrograms(linkage_matrix, epsilon, num_clusters)
 plot_heatmaps()
 output = optimize_portfolio(avg_return_per_cluster, cluster_cov_matrix, avg_esg_per_cluster)
 
@@ -351,7 +374,8 @@ print(f"Weighted expected return of portfolio: {output[1]:.2f}")
 print(f"Risk of portfolio: {output[2]:.2f}")
 print(f"Weighted ESG score of portfolio: {output[3]:.2f}")
 
-# Perform numerical experiments and creating a parallel coordinates plot
-num_clusters_list = list(range(2, 21, 1))
-sigma_list = np.arange(0, 1.05, 0.05)
-parallel_coordinates_plot(num_clusters_list, sigma_list)
+#Perform numerical experiments and creating a parallel coordinates plot
+#num_clusters_list = list(range(2, 16, 1))
+#epsilon_list = np.arange(0, 1.05, 0.05)
+#parallel_coordinates_plot(num_clusters_list, epsilon_list)
+
