@@ -1,23 +1,25 @@
-# Mathematics For Industry
+# Hierarchical Clustering of Stocks Based on Returns and ESG Scores
 
-## Hierarchical Clustering of Returns and ESG
+## Overview
 
-This script performs hierarchical clustering on a set of Dow Jones stocks based on their annual returns and ESG (Environmental, Social, and Governance) risk ratings. It combines financial performance data with ESG scores to analyze and visualize how stocks cluster together, providing insights into the relationship between these factors.
+This project applies hierarchical clustering to stocks based on historical returns and ESG scores. The goal is to form stock clusters that optimize portfolio returns while satisfying the ESG constraints.
 
-### Necessary Modules
+## Dependencies
 
-The script requires the following Python libraries:
+This project relies on several Python libraries for data handling, visualization, and clustering. Make sure the following packages are installed:
+
 - `numpy`
 - `pandas`
-- `os`
-- `seaborn`
-- `matplotlib`
+- `scikit-learn`
 - `scipy`
-- `sklearn`
+- `matplotlib`
+- `seaborn`
+- `plotly`
+- `yfinance`
+- `kneed`
 
-### Installation
+## File Descriptions
 
-You can install all the necessary modules using the following command:
-
-```sh
-pip install numpy pandas seaborn matplotlib scipy scikit-learn
+- **`download_historical_stock_data.py`**: Retrieves historical stock prices and ESG scores using Yahoo Finance.
+- **`cluster_number.py`**: Provides different methods to determine the optimal number of clusters and visualizes the results.
+- **`Hierarchical Clustering of Returns and ESG.py`**: The mainscript loads data, computes metrics, applies hierarchical clustering, optimizes the portfolio, and provides various visualizations of the results.
